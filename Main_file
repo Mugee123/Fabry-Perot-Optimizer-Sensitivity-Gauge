@@ -1,0 +1,77 @@
+import numpy as np
+from numpy import sin,pow, pi, abs
+import matplotlib.pyplot as plt
+
+n = 1
+C = 3e8
+m = 1
+wl = 1550e-9
+freq = C/(wl)
+L = m*C/(2*freq*n)
+
+
+bounds = [(1e-12, 1e-4)]
+
+while True:
+    if (L<bounds[0][-1]):
+        m+=1
+        L = m*C/(2*freq*n)
+        print(L)
+    elif (L>bounds[0][-1]):
+        m-=1
+        L = m*C/(2*freq*n)
+        print(f"Now: {L}:")
+        break
+    else:
+        break
+
+
+def Transmittence(L, FREQ, max_R,refractive_index):
+    # l is the only parameter to be optimized
+
+    term_1 = 4.0*max_R/np.square(1.0-max_R)
+    term_2 = np.square(
+        np.sin(2.0*pi*L*FREQ*refractive_index/C)
+    )
+
+    denom = 1 + term_1*term_2
+
+
+    return np.reciprocal(denom)
+
+
+print(f"Length: {L}")
+FSR = C/(2*L)
+print(f"FSR: {FSR}")
+
+
+# Shifted transmittence function - find the closest peak
+resonant_fs_n2 = []
+for i in np.linspace(freq-FSR,freq+FSR,1000):
+
+    if Transmittence(L,i,0.99,1.5) == 1:
+        print("Yes.")
+        delta_f = abs(freq - i)
+        resonant_fs_n2.append(delta_f)
+
+delta_f = min(resonant_fs_n2)
+
+# Plot original transmittence function
+x = [i for i in np.linspace(freq-delta_f,freq+delta_f, 1000)]
+y = [Transmittence(L,i,0.99,n) for i in x]
+
+plt.axvline(x=freq, linestyle = '--',color = 'red',linewidth = 2)  # Mark user desired frequency
+plt.plot(x,y, color='blue')
+
+
+# Plot the Shifted transmittence function, find the nearest peak / resonance frequency of that function
+y2 = [Transmittence(L,i,0.99,1.5) for i in x]
+plt.plot(x,y2, color='orange')
+
+
+# Display sensitivity
+n2 = 1.5
+n1 = 1
+sensitivity = delta_f/(n2-n1) # in HZ
+print(sensitivity)
+plt.show()
