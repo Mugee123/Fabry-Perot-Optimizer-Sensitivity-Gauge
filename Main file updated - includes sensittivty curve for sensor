@@ -1,0 +1,114 @@
+import numpy as np
+from numpy import sin,pow, pi, abs
+import matplotlib.pyplot as plt
+C = 3e8
+
+
+
+
+def obtain_L(min_l,max_l, freq, n):
+    bounds = [(min_l,max_l)]
+
+    m = 1
+    L = m * C / (2 * freq * n)  # L initial
+
+    while True:
+        if (L < bounds[0][-1]):
+            m += 1
+            L = m * C / (2 * freq * n)
+        elif (L > bounds[0][-1]):
+            m -= 1
+            L = m * C / (2 * freq * n)
+            break
+        else:
+            break
+
+    return L
+
+
+def Transmittence(L, FREQ, max_R,refractive_index):
+    # Transmittence curve vs. frequency
+
+    term_1 = 4.0*max_R/np.square(1.0-max_R)
+    term_2 = np.square(
+        np.sin(2.0*pi*L*FREQ*refractive_index/C)
+    )
+
+    denom = 1 + term_1*term_2
+
+    return np.reciprocal(denom)
+
+def find_delta_f(n1_resonant_freq, L, FSR_1, n2):
+    # Shift in resonance between Transmittence curve of n1, n2
+    # Finds the closest peak between the shifted & original (base) transmittence curve
+
+    resonant_fs_n2 = []
+    m0 = round(2 * L * n1_resonant_freq / C)
+
+    f = m0 * C / (2 * n2 * L)
+    return abs(n1_resonant_freq - f)
+
+
+def sensitivity(freq, L, FSR_1, n1=1):
+    # Obtain sensitivity values. Uses an "original" or base transmittence as the base
+
+    frequency_shifts = []
+    n_shifts = []      # corresponding refractive index shifts
+
+    for n in np.linspace(0.01,5, 100):
+        deltaf = find_delta_f(freq, L, FSR_1, n)     # (n1_resonant_freq, L, FSR_1, n2):
+
+        if(deltaf == "Error."):
+            continue
+        else:
+            delta_n = n1 - n
+
+        n_shifts.append(delta_n)
+        frequency_shifts.append(deltaf)
+
+    return n_shifts, frequency_shifts
+
+
+def plot_curve(freq, L, deltaf, n):
+    # Plots transmittence function for given L, n, desired resonant frequency over the range of freq-deltaf, freq+deltaf
+    x = [i for i in np.linspace(freq - deltaf, freq + deltaf, 1000)]
+    y = [Transmittence(L, i, 0.99, n) for i in x]
+
+    plt.axvline(x=freq, linestyle='--', color='red', linewidth=2)  # Mark user desired frequency
+    plt.plot(x, y)
+
+
+
+def main():
+    n1 = float(input("n1: "))
+    min_l = float(input("min L: "))
+    max_l = float(input("max L "))
+    wl = float(input("wl"))
+    freq = C/wl
+
+    L = obtain_L(min_l, max_l, freq, n1)
+    FSR_n1 = C / (2 * L*n1)
+
+    print(L, FSR_n1)
+
+    delta_f_curve = []
+    delta_n_curve = []
+
+
+    #plot_curve(freq, L, find_delta_f(freq, L, FSR_n1, n1), n1)
+    #plot_curve(freq,L,find_delta_f(freq,L, FSR_n1, 1.5),1.5)
+
+    #plt.xlim(freq-FSR_n1, freq+FSR_n1)
+    #plt.show()
+
+
+    print("MAN")
+    print(delta_f_curve)
+
+    delta_n_curve, delta_f_curve = sensitivity(freq,L,FSR_n1,n1)
+
+    # Plot
+    plt.scatter(delta_n_curve,delta_f_curve)
+    plt.show()
+
+main()
